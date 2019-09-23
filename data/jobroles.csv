@@ -1,0 +1,22 @@
+"name", "doesCashOut"
+"General Manager", false
+"Assistant Manager", false
+"Line Cook", false
+"Dishwasher", false
+"Drive-Thru Operator", false
+"Fast Food Cook", false
+"Cashier", true
+"Short Order Cook", false
+"Barista", false
+"Kitchen Manager", false
+"Food and Beverage Manager", false
+"Server", true
+"Prep Cook", false
+"Runner", false
+"Busser", true
+"Host", false
+"Bartender", true
+"Executive Chef", false
+"Sous Chef", false
+"Maître D’", false
+"Sommelier", false

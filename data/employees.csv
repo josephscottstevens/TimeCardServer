@@ -1,0 +1,3 @@
+"firstname", "middlename", "lastname", "pin", "jobroles"
+"Gary", "", "Truong", 1234, [ "General Manager", "Short Order Cook" ]
+"Joseph", "Scott", "Stevens", 1739, [ "Cashier" ]

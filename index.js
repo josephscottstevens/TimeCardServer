@@ -1,25 +1,23 @@
-var express = require('express')
-var bodyParser = require('body-parser')
-const fs = require('fs');
-const port = 3000;
-var app = express();
+import express from 'express';
+import { json } from 'body-parser';
+import { appendFile, readFile } from 'fs';
 
-function timeEntryToCsv(timeEntry) {
-    return timeEntry.pin + "," + timeEntry.clockedInAt + "," + timeEntry.clockedOutAt + "\n";
+const port = 3000;
+const app = express();
+
+function clockinToCsv(timeEntry) {
+    return timeEntry.pin + "," + timeEntry.clockedInAt + "\n";
 }
 
+function clockoutToCsv(timeEntry) {
+    return timeEntry.pin + "," + timeEntry.clockedOutAt + "," + timeEntry.tipsCollected + "\n";
+}
 
-// create application/json parser
-var jsonParser = bodyParser.json()
+var jsonParser = json();
 
-// create application/x-www-form-urlencoded parser
-var urlencodedParser = bodyParser.urlencoded({ extended: false })
-
-// POST /login gets urlencoded bodies
-app.post('/timeentry', urlencodedParser, function (req, res) {
-    // todo async stuff
+app.post('/clockin', jsonParser, function (req, res) {
     console.log(req.body);
-    fs.appendFile('timecardentry.txt', timeEntryToCsv(req.body), function (err) {
+    appendFile('data/clockin.csv', clockinToCsv(req.body), function (err) {
         if (err) {
             console.log('Error!', err);
             res.send('error');
@@ -28,11 +26,43 @@ app.post('/timeentry', urlencodedParser, function (req, res) {
             res.send('success');
         }
     });
-})
+});
 
-// POST /api/users gets JSON bodies
-app.post('/api/users', jsonParser, function (req, res) {
-  // create user in req.body
-})
+app.post('/clockout', jsonParser, function (req, res) {
+    console.log(req.body);
+    appendFile('data/clockout.csv', clockoutToCsv(req.body), function (err) {
+        if (err) {
+            console.log('Error!', err);
+            res.send('error');
+        } else {
+            console.log('Saved!');
+            res.send('success');
+        }
+    });
+});
+
+app.get('/jobroles', function (req, res) {
+    readFile('data/jobroles.csv', null, function (err, data) {
+        if (err) {
+            console.log('Error!', err);
+            res.send('error');
+        } else {
+            console.log('Saved!');
+            res.send(data);
+        }
+    });
+});
+
+app.get('/employees', function (req, res) {
+    readFile('data/employees.csv', null, function (err, data) {
+        if (err) {
+            console.log('Error!', err);
+            res.send('error');
+        } else {
+            console.log('Saved!');
+            res.send(data);
+        }
+    });
+});
 
 app.listen(port, () => console.log(`App listening on port ${port}!`));
