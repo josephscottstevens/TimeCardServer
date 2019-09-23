@@ -1,1 +1,2 @@
-"pin", "clockedOutAt", "tipsCollected"
+"pin", "clockedInAt", "clockedOutAt", "tipsCollected"
+1234,1569269044870,1569269044890,50
