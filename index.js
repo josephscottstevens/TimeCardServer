@@ -1,6 +1,7 @@
 import express from 'express';
 import { json } from 'body-parser';
 import { appendFile, readFile } from 'fs';
+var csv = require("csvtojson");
 
 const port = 3000;
 const app = express();
@@ -11,6 +12,19 @@ function clockinToCsv(timeEntry) {
 
 function clockoutToCsv(timeEntry) {
     return timeEntry.pin + "," + timeEntry.clockedOutAt + "," + timeEntry.tipsCollected + "\n";
+}
+
+function readJson(res, fileName) {
+    csv()
+    .on('error',(err)=>{
+        console.log(err)
+        res.send("error");
+    })
+    .fromFile(fileName)
+    .then(function(data){ //when parse finished, result will be emitted here.
+        console.log(data);
+        res.send(data);
+    });
 }
 
 var jsonParser = json();
@@ -41,28 +55,12 @@ app.post('/clockout', jsonParser, function (req, res) {
     });
 });
 
-app.get('/jobroles', function (req, res) {
-    readFile('data/jobroles.csv', null, function (err, data) {
-        if (err) {
-            console.log('Error!', err);
-            res.send('error');
-        } else {
-            console.log('Saved!');
-            res.send(data);
-        }
-    });
+app.get('/jobroles/', function (req, res) {
+    readJson(res, 'data/jobroles.csv');
 });
 
 app.get('/employees', function (req, res) {
-    readFile('data/employees.csv', null, function (err, data) {
-        if (err) {
-            console.log('Error!', err);
-            res.send('error');
-        } else {
-            console.log('Saved!');
-            res.send(data);
-        }
-    });
+    readJson(res, 'data/employees.csv');
 });
 
 app.listen(port, () => console.log(`App listening on port ${port}!`));
