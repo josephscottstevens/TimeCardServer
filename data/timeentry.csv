@@ -1,2 +1,5 @@
 "type", "pin", "time", "tipsCollected"
-"clockedin",1234,1569269044890,50
+clockedin,1234,1569269044890,
+clockedout,1234,1569336062793,50
+clockedin,1234,1569336087209,undefined
+clockedout,1234,1569336401700,50

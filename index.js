@@ -6,14 +6,6 @@ var csv = require("csvtojson");
 const port = 3000;
 const app = express();
 
-function clockinToCsv(timeEntry) {
-    return timeEntry.pin + "," + timeEntry.time + "\n";
-}
-
-function clockoutToCsv(timeEntry) {
-    return timeEntry.pin + "," + timeEntry.time + "," + timeEntry.clockedOutAt + "," + timeEntry.tipsCollected + "\n";
-}
-
 function readJson(res, fileName, parser) {
     csv(parser)
     .on('error',(err)=>{
@@ -47,32 +39,6 @@ app.use(function (req, res, next) {
     next();
 });
 
-// app.post('/clockin', jsonParser, function (req, res) {
-//     console.log(req.body);
-//     appendFile('data/clockin.csv', clockinToCsv(req.body), function (err) {
-//         if (err) {
-//             console.log('Error!', err);
-//             res.send('error');
-//         } else {
-//             console.log('Saved!');
-//             res.send('success');
-//         }
-//     });
-// });
-
-// app.post('/clockout', jsonParser, function (req, res) {
-//     console.log(req.body);
-//     appendFile('data/clockout.csv', clockoutToCsv(req.body), function (err) {
-//         if (err) {
-//             console.log('Error!', err);
-//             res.send('error');
-//         } else {
-//             console.log('Saved!');
-//             res.send('success');
-//         }
-//     });
-// });
-
 app.get('/jobroles/', function (req, res) {
     readJson(res, 'data/jobroles.csv', {
         colParser:{
@@ -101,7 +67,19 @@ app.get('/employees', function (req, res) {
     });
 });
 
-app.post('/timeentrystatus', jsonParser, function (req, res) {
+function timeentryToCsv(timeEntry) {
+    return timeEntry.type + "," + timeEntry.pin + "," + timeEntry.time + "," + timeEntry.tipsCollected + "\n";
+}
+
+function getMostRecentTimeEntry(data, pin) {
+    return data
+           .filter(t => t.pin == pin)
+           .reduce(function(prev, current, ) {
+               return (prev.time > current.time) ? prev : current
+           }, []);
+}
+
+app.get('/getclockedinstatus/:pin', function (req, res) {
     csv()
     .on('error',(err)=>{
         console.log(err)
@@ -109,29 +87,48 @@ app.post('/timeentrystatus', jsonParser, function (req, res) {
     })
     .fromFile('data/timeentry.csv')
     .then(function(data) {
-        console.log("!", req.body, data);
-        var maybeClockedIn = 
-            data
-            .filter(t => t.pin == req.body.pin)
-            // .map(t => t.clockedInAt)
-            ;
-        // todo test if empty breaks this, or other things can break it
-        const max = data.reduce(function(prev, current) {
-            return (prev.time > current.time) ? prev : current
-        });
-        console.log("max", max);
-        var dataToWrite = req.body;
-        if (maybeClockedIn.length > 0) {
-            // dataToWrite.clockedInAt = maxClockedIn;
+        const maxTimeEntry = getMostRecentTimeEntry(data, req.params.pin);
+        var response = {};
+        if (!Array.isArray(maxTimeEntry) || !maxTimeEntry.length) {
+            // If user has never clocked in before, this is dumb data that represents that.
+            response.type = "clockedout";
+            response.pin = req.params.pin;
+            response.time = Date.now();
+            response.tipsCollected = null;
         } else {
+            response = maxTimeEntry;
         }
-        appendFile('data/timeentry.csv', clockoutToCsv(dataToWrite), function (err) {
+        res.send(response);
+    });
+});
+
+app.post('/entertime', jsonParser, function (req, res) {
+    csv()
+    .on('error',(err)=>{
+        console.log(err)
+        res.send("error");
+    })
+    .fromFile('data/timeentry.csv')
+    .then(function(data) {
+        const maxTimeEntry = getMostRecentTimeEntry(data, req.body.pin);
+        var dataToWrite = {};
+        if (maxTimeEntry.type == "clockedout") {
+            dataToWrite.type = "clockedin";
+            dataToWrite.pin = req.body.pin;
+            dataToWrite.time = Date.now();
+        } else if (maxTimeEntry.type == "clockedin") {
+            dataToWrite.type = "clockedout";
+            dataToWrite.pin = req.body.pin;
+            dataToWrite.time = Date.now();
+            dataToWrite.tipsCollected = req.body.tipsCollected;
+        }
+        appendFile('data/timeentry.csv', timeentryToCsv(dataToWrite), function (err) {
             if (err) {
                 console.log('Error!', err);
                 res.send('error');
             } else {
                 console.log('Saved!');
-                res.send('success');
+                res.send(dataToWrite);
             }
         });
     });
