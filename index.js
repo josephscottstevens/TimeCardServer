@@ -7,11 +7,11 @@ const port = 3000;
 const app = express();
 
 function clockinToCsv(timeEntry) {
-    return timeEntry.pin + "," + timeEntry.clockedInAt + "\n";
+    return timeEntry.pin + "," + timeEntry.time + "\n";
 }
 
 function clockoutToCsv(timeEntry) {
-    return timeEntry.pin + "," + timeEntry.clockedInAt + "," + timeEntry.clockedOutAt + "," + timeEntry.tipsCollected + "\n";
+    return timeEntry.pin + "," + timeEntry.time + "," + timeEntry.clockedOutAt + "," + timeEntry.tipsCollected + "\n";
 }
 
 function readJson(res, fileName, parser) {
@@ -22,11 +22,6 @@ function readJson(res, fileName, parser) {
     })
     .fromFile(fileName)
     .then(function(data) {
-        // console.log("before", data);
-        // for (var i = 0; i < data.length; i++) {
-        //     data[i].doesCashOut = !!data[i].doesCashOut;
-        // }
-        // console.log("after", data);
         res.send(data);
     });
 }
@@ -112,25 +107,25 @@ app.post('/timeentrystatus', jsonParser, function (req, res) {
         console.log(err)
         res.send("error");
     })
-    .fromFile('data/clockin.csv')
+    .fromFile('data/timeentry.csv')
     .then(function(data) {
         console.log("!", req.body, data);
         var maybeClockedIn = 
             data
             .filter(t => t.pin == req.body.pin)
-            .map(t => t.clockedInAt)
+            // .map(t => t.clockedInAt)
             ;
-        var maxClockedIn = Math.max(maybeClockedIn);
-        console.log("maxClockedIn", maxClockedIn);
-        var fileToWriteTo = "";
+        // todo test if empty breaks this, or other things can break it
+        const max = data.reduce(function(prev, current) {
+            return (prev.time > current.time) ? prev : current
+        });
+        console.log("max", max);
         var dataToWrite = req.body;
         if (maybeClockedIn.length > 0) {
-            fileToWriteTo = 'data/clockout.csv';
-            dataToWrite.clockedInAt = maxClockedIn;
+            // dataToWrite.clockedInAt = maxClockedIn;
         } else {
-            fileToWriteTo = 'data/clockin.csv';
         }
-        appendFile(fileToWriteTo, clockoutToCsv(dataToWrite), function (err) {
+        appendFile('data/timeentry.csv', clockoutToCsv(dataToWrite), function (err) {
             if (err) {
                 console.log('Error!', err);
                 res.send('error');
@@ -139,8 +134,6 @@ app.post('/timeentrystatus', jsonParser, function (req, res) {
                 res.send('success');
             }
         });
-        //Math.max(data.clockedInAt)
-        // res.send(data);
     });
 });
 
