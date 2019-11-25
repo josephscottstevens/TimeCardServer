@@ -19,6 +19,8 @@ function readJson(res, fileName, parser) {
 }
 
 var jsonParser = json();
+const clockedout = "clockedout";
+const clockedin = "clockedin";
 
 app.use(function (req, res, next) {
 
@@ -68,18 +70,39 @@ app.get('/employees', function (req, res) {
 });
 
 function timeentryToCsv(timeEntry) {
+    if (timeEntry.tipsCollected === undefined) {
+        timeEntry.tipsCollected = "";
+    }
+    if (timeEntry.type === clockedin && timeEntry.tipsCollected) {
+        //TODO: log error, can't have tip on clocked in
+        console.error("Cannot collect tips on clock in");
+    }
+    if (timeEntry.type != clockedin && timeEntry.type != clockedout) {
+        //TODO: log error, can't have tip on clocked in
+        console.error(`invalid timeEntry type of ${timeEntry.type}`);
+    }
+    if (!timeEntry.tipsCollected) {
+        // If there are no tips collected, set to the number 0 instead of null or undefined
+        timeEntry.tipsCollected = 0;
+    }
     return timeEntry.type + "," + timeEntry.pin + "," + timeEntry.time + "," + timeEntry.tipsCollected + "\n";
 }
 
 function getMostRecentTimeEntry(data, pin) {
-    return data
-           .filter(t => t.pin == pin)
-           .reduce(function(prev, current, ) {
-               return (prev.time > current.time) ? prev : current
-           }, []);
+    var mostRecentTimeEntry = 
+        data
+        .filter(t => t.pin == pin)
+        .reduce(function(prev, current, ) {
+            return (prev.time > current.time) ? prev : current
+        }, {nodata:true});
+    if (mostRecentTimeEntry.nodata) {
+        return null;
+    } else {
+        return mostRecentTimeEntry;
+    }
 }
 
-app.get('/getclockedinstatus/:pin', function (req, res) {
+app.get('/clockedinstatus/:pin', function (req, res) {
     csv()
     .on('error',(err)=>{
         console.log(err)
@@ -89,9 +112,10 @@ app.get('/getclockedinstatus/:pin', function (req, res) {
     .then(function(data) {
         const maxTimeEntry = getMostRecentTimeEntry(data, req.params.pin);
         var response = {};
-        if (!Array.isArray(maxTimeEntry) || !maxTimeEntry.length) {
-            // If user has never clocked in before, this is dumb data that represents that.
-            response.type = "clockedout";
+        console.log(maxTimeEntry);
+        if (maxTimeEntry === null) {
+            // If user has never clocked in before
+            response.type = clockedout;
             response.pin = req.params.pin;
             response.time = Date.now();
             response.tipsCollected = null;
@@ -102,7 +126,7 @@ app.get('/getclockedinstatus/:pin', function (req, res) {
     });
 });
 
-app.post('/entertime', jsonParser, function (req, res) {
+app.post('/timeentry', jsonParser, function (req, res) {
     csv()
     .on('error',(err)=>{
         console.log(err)
@@ -112,12 +136,12 @@ app.post('/entertime', jsonParser, function (req, res) {
     .then(function(data) {
         const maxTimeEntry = getMostRecentTimeEntry(data, req.body.pin);
         var dataToWrite = {};
-        if (maxTimeEntry.type == "clockedout") {
-            dataToWrite.type = "clockedin";
+        if (!maxTimeEntry || maxTimeEntry.type == clockedout) {
+            dataToWrite.type = clockedin;
             dataToWrite.pin = req.body.pin;
             dataToWrite.time = Date.now();
-        } else if (maxTimeEntry.type == "clockedin") {
-            dataToWrite.type = "clockedout";
+        } else if (maxTimeEntry.type == clockedin) {
+            dataToWrite.type = clockedout;
             dataToWrite.pin = req.body.pin;
             dataToWrite.time = Date.now();
             dataToWrite.tipsCollected = req.body.tipsCollected;
